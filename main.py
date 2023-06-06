@@ -13,16 +13,12 @@ cap = cv2.VideoCapture(0)
 mpDraw = mp.solutions.drawing_utils
 mp_drawing_styles = mp.solutions.drawing_styles
 
-# Hand detection
-mpHands = mp.solutions.hands
-hands = mpHands.Hands()
-
 # Face detection
 mpFaceMesh = mp.solutions.face_mesh
 
 # Gesture model path
 model_directory = os.getcwd()
-model_file ="gesture_recognizer.task"
+model_file ="Handtracking-VSC\\gesture_recognizer.task"
 
 # Gesture detection
 BaseOptions = mp.tasks.BaseOptions
@@ -36,7 +32,7 @@ def print_gesture(result: GestureRecognizerResult, output_image: mp.Image, times
 
 # Create a gesture recognizer instance with video mode
 options = GestureRecognizerOptions(
-    base_options = BaseOptions(model_asset_path=os.path.join(model_directory, model_file)),
+    base_options = BaseOptions(model_asset_path=os.path.join(model_file)),
     running_mode = VisionRunningMode.LIVE_STREAM,
     result_callback = print_gesture) 
 with GestureRecognizer.create_from_options(options) as recognizer, mpFaceMesh.FaceMesh(
@@ -44,18 +40,23 @@ with GestureRecognizer.create_from_options(options) as recognizer, mpFaceMesh.Fa
     refine_landmarks=True,
     min_detection_confidence=0.5,
     min_tracking_confidence=0.5) as face_mesh:
+
+    # Hand detection
+    mpHands = mp.solutions.hands
+    hands = mpHands.Hands()
+
     while cap.isOpened():
         success, image = cap.read()
         imageRGB = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         results = hands.process(imageRGB)
         faceResults = face_mesh.process(image)
 
-        mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=cv2.GetMat(image))
+        ##### TODO: Figure out how to implement gesture recognition
+        # mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=cv2.GetMat(image))
 
-        recognizer.recognize_async(mp_image, cap.get(cv2.CAP_PROP_POS_MSEC))
+        # recognizer.recognize_async(mp_image, cap.get(cv2.CAP_PROP_POS_MSEC))
 
         gesture = "NONE"
-
         
         # checking whether a hand is detected
         if results.multi_hand_landmarks:
