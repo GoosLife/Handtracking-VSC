@@ -26,13 +26,17 @@ PINKY_BOTTOM_MID = 18
 PINKY_TOP_MID = 19
 PINKY_TIP = 20
 
+ID = 0
+X = 1
+Y = 2
+
 # Check if the hand is upside down
 def hand_down(points):
     return points[MIDDLE_TIP].y > points[WRIST].y
 
-def palm_up(points):
-    return points[THUMB_TIP].y < points[THUMB_TOP_MID].y \
-        and points[INDEX_TIP].y < points[INDEX_TOP_MID].y \
-        and points[MIDDLE_TIP].y < points[MIDDLE_TOP_MID].y \
-        and points[RING_TIP].y < points[RING_TOP_MID].y \
-        and points[PINKY_TIP].y < points[PINKY_TOP_MID].y
+def palm_up(points: list):
+    return points[THUMB_TIP][Y] < points[THUMB_BOTTOM][Y] \
+        and points[INDEX_TIP][Y] < points[INDEX_TOP_MID][Y] \
+        and points[MIDDLE_TIP][Y] < points[MIDDLE_TOP_MID][Y] \
+        and points[RING_TIP][Y] < points[RING_TOP_MID][Y] \
+        and points[PINKY_TIP][Y] < points[PINKY_TOP_MID][Y]
