@@ -5,6 +5,11 @@ import os
 import mediapipe as mp
 from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
+from math import hypot
+from ctypes import cast, POINTER
+from comtypes import CLSCTX_ALL
+from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
+import numpy as np
 
 # Video input 
 cap = cv2.VideoCapture(0)
@@ -18,7 +23,7 @@ mpFaceMesh = mp.solutions.face_mesh
 
 # Gesture model path
 model_directory = os.getcwd()
-model_file ="Handtracking-VSC\\gesture_recognizer.task"
+model_file ="gesture_recognizer.task"
 
 # Gesture detection
 BaseOptions = mp.tasks.BaseOptions
@@ -27,12 +32,19 @@ GestureRecognizerOptions = mp.tasks.vision.GestureRecognizerOptions
 GestureRecognizerResult = mp.tasks.vision.GestureRecognizerResult
 VisionRunningMode = mp.tasks.vision.RunningMode
 
+# Audio device control setup
+devices = AudioUtilities.GetSpeakers()
+interface = devices.Activate(IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
+volume = cast(interface, POINTER(IAudioEndpointVolume))
+
+volMin, volMax = volume.GetVolumeRange()[:2]
+
 def print_gesture(result: GestureRecognizerResult, output_image: mp.Image, timestamp_ms: int):
     print('gesture recognition result: {}'.format(result))
 
 # Create a gesture recognizer instance with video mode
 options = GestureRecognizerOptions(
-    base_options = BaseOptions(model_asset_path=os.path.join(model_file)),
+    base_options = BaseOptions(model_asset_path=os.path.join(os.getcwd(), model_file)),
     running_mode = VisionRunningMode.LIVE_STREAM,
     result_callback = print_gesture) 
 with GestureRecognizer.create_from_options(options) as recognizer, mpFaceMesh.FaceMesh(
@@ -56,21 +68,59 @@ with GestureRecognizer.create_from_options(options) as recognizer, mpFaceMesh.Fa
 
         # recognizer.recognize_async(mp_image, cap.get(cv2.CAP_PROP_POS_MSEC))
 
-        gesture = "NONE"
-        
+        rightGesture = "NONE"
+        leftGesture = "NONE"
+
+        handLandmarks = []
+        handIndexIterator = 0
+
         # checking whether a hand is detected
         if results.multi_hand_landmarks:
+            for hand in results.multi_handedness:
+                if hand.classification[0].label == "Right":
+                    RIGHT_HAND = handIndexIterator
+                else:
+                    LEFT_HAND = handIndexIterator
+                handIndexIterator += 1
+                print(hand.classification[0].label)
             for handLms in results.multi_hand_landmarks: # working with each hand
+                hand = []
                 for id, lm in enumerate(handLms.landmark):
                     h, w, c = image.shape
                     cx, cy = int(lm.x * w), int(lm.y * h)
+                    hand.append([id, cx, cy])
 
                     if id == 10:
                         cv2.circle(image, (cx, cy), 12, (255,0,0), cv2.FILLED)
-                        gesture = "LANDMARK ID 10 DETECTED"
+                
+                handLandmarks.append(hand)
 
-                mpDraw.draw_landmarks(image, handLms, mpHands.HAND_CONNECTIONS) 
+                # Check if hand is down (for each hand)
+                if finger_utils.hand_down(handLms.landmark):
+                    gesture = "HAND DOWN"
+                elif finger_utils.palm_up(handLms.landmark):
+                    gesture = "PALM UP"
+                
+                mpDraw.draw_landmarks(image, handLms, mpHands.HAND_CONNECTIONS)
         
+        # Get thumb and index coords (for each hand)
+        if len(handLandmarks) > 0:
+            hand = handLandmarks[0]
+            if (handLandmarks != None):
+                x1, y1 = hand[4][1], hand[4][2]
+                x2, y2 = hand[8][1], hand[8][2]
+
+            # Draw line between thumb and index
+            cv2.circle(image, (x1, y1), 12, (0,255,0), cv2.FILLED)
+            cv2.circle(image, (x2, y2), 12, (0,255,0), cv2.FILLED)
+            cv2.line(image, (x1, y1), (x2, y2), (0,255,0), 3)
+
+            # Calculate volume based on distance between fingers
+            length = hypot(x2 - x1, y2 - y1)
+            vol = np.interp(length, [15, 220], [volMin, volMax])
+            
+            # Set volume
+            volume.SetMasterVolumeLevel(vol, None)
 
         # checking whether a face is detected
         if faceResults.multi_face_landmarks:
@@ -99,7 +149,7 @@ with GestureRecognizer.create_from_options(options) as recognizer, mpFaceMesh.Fa
                 
         image = cv2.flip(image, 1)
         # write gesture to img
-        cv2.putText(image, str(gesture), (25,50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,0,0), 5)
+        cv2.putText(image, str(leftGesture), (25,50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,0,0), 5)
                 
         cv2.imshow("Output", image)
         
