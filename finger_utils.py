@@ -30,9 +30,11 @@ ID = 0
 X = 1
 Y = 2
 
-# Check if the hand is upside down
 def hand_down(points):
-    return points[MIDDLE_TIP].y > points[WRIST].y
+    for finger_id in range(1, 21):
+        if points[finger_id][Y] <= points[WRIST][Y]:
+            return False
+    return True
 
 def palm_up(points: list):
     return points[THUMB_TIP][Y] < points[THUMB_BOTTOM][Y] \
@@ -40,3 +42,31 @@ def palm_up(points: list):
         and points[MIDDLE_TIP][Y] < points[MIDDLE_TOP_MID][Y] \
         and points[RING_TIP][Y] < points[RING_TOP_MID][Y] \
         and points[PINKY_TIP][Y] < points[PINKY_TOP_MID][Y]
+    
+def pointing_left(points: list):
+    # Check if the thumb is to the right of the index finger
+    if points[THUMB_TIP][X] > points[INDEX_TIP][X]:
+        # Check if the index finger tip is to the left of the rest of the index finger
+        if points[INDEX_TIP][X] < points[INDEX_TOP_MID][X]:
+            # Check if the middle, ring, and pinky fingers are pointing towards the palm
+            if (
+                points[MIDDLE_TIP][X] > points[MIDDLE_TOP_MID][X]
+                and points[RING_TIP][X] > points[RING_TOP_MID][X]
+                and points[PINKY_TIP][X] > points[PINKY_TOP_MID][X]
+            ):
+                return True
+    return False
+
+def pointing_right(points: list):
+    # Check if the thumb is to the left of the index finger
+    if points[THUMB_TIP][X] < points[INDEX_TIP][X]:
+        # Check if the index finger tip is to the right of the rest of the index finger
+        if points[INDEX_TIP][X] > points[INDEX_TOP_MID][X]:
+            # Check if the middle, ring, and pinky fingers are pointing towards the palm
+            if (
+                points[MIDDLE_TIP][X] < points[MIDDLE_TOP_MID][X]
+                and points[RING_TIP][X] < points[RING_TOP_MID][X]
+                and points[PINKY_TIP][X] < points[PINKY_TOP_MID][X]
+            ):
+                return True
+    return False
